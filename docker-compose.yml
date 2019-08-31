@@ -1,0 +1,181 @@
+version: "3.5"
+
+services:
+  frontend:
+    container_name: noodlee-frontend
+    image: noodlee-frontend
+    build:
+      context: ../noodlee-frontend
+      dockerfile: Dockerfile
+    ports:
+      - '80:80'
+    depends_on:
+      - noodlee-gateway
+    networks:
+      - noodlee-system-network
+  
+  noodlee-gateway:
+    container_name: noodlee-gateway
+    build:
+      context: ../noodlee-gateway
+      dockerfile: Dockerfile
+    image: noodlee-gateway
+    ports:
+      - "8080:8080"
+    networks:
+      - noodlee-system-network
+
+  authentication-service:
+    container_name: authentication-service
+    build:
+      context: ../noodlee-authentication
+      dockerfile: Dockerfile
+    image: authentication-service
+    ports:
+      - "8081:8080"
+    depends_on:
+      - authentication-service_database
+      - users-service
+      - seq
+      - rabbitmq
+    networks:
+      - noodlee-system-network
+
+  authentication-service_database:
+    container_name: authentication-service_database
+    image: postgres:9.6
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: PdgDNLnlrr3NgshqwKJA
+      POSTGRES_DB: registration
+    volumes:
+      - authentication-service_database-volume:/var/lib/postgresql/authentication
+      - ../noodlee-authentication/_database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - noodlee-system-network
+
+  users-service:
+    container_name: users-service
+    build:
+      context: ../noodlee-users
+      dockerfile: Dockerfile
+    image: users-service
+    ports:
+      - "8082:8080"
+    depends_on:
+      - users-service_database
+      - seq
+      - rabbitmq
+    networks:
+      - noodlee-system-network
+
+  users-service_database:
+    container_name: users-service_database
+    image: postgres:9.6
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 3CcbvP@!z&YZ6Hkb3yp_
+      POSTGRES_DB: users
+    volumes:
+      - users-service_database-volume:/var/lib/postgresql/users
+      - ../noodlee-users/_database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - noodlee-system-network
+
+  courses-service:
+    container_name: courses-service
+    build:
+      context: ../noodlee-courses
+      dockerfile: Dockerfile
+    image: courses-service
+    ports:
+      - "8083:8080"
+    depends_on:
+      - courses-service_database
+      - users-service
+      - seq
+      - rabbitmq
+    networks:
+      - noodlee-system-network
+
+  courses-service_database:
+    container_name: courses-service_database
+    image: postgres:9.6
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: N>4yQ5^N#7%;vGR]
+      POSTGRES_DB: courses
+    volumes:
+      - courses-service_database-volume:/var/lib/postgresql/courses
+    networks:
+      - noodlee-system-network
+
+  message-service:
+    container_name: message-service
+    build:
+      context: ../noodlee-message
+      dockerfile: Dockerfile
+    image: message-service
+    ports:
+      - "8084:8080"
+    depends_on:
+      - message-service_database
+      - seq
+      - rabbitmq
+    networks:
+      - noodlee-system-network
+
+  message-service_database:
+    container_name: message-service_database
+    image: postgres:9.6
+    ports:
+      - "5436:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: PFmte}vA*88`&"26
+      POSTGRES_DB: messages
+    volumes:
+      - message-service_database-volume:/var/lib/postgresql/message
+    networks:
+      - noodlee-system-network
+
+  seq:
+    container_name: noodlee_seq
+    image: datalust/seq
+    environment:
+      ACCEPT_EULA: Y
+    ports:
+      - "5341:5341"
+      - "5000:80"
+    networks:
+      - noodlee-system-network
+
+  rabbitmq:
+    container_name: noodlee_rabbitmq
+    image: "rabbitmq:3-management"
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    labels:
+      NAME: "rabbitmq"
+    volumes:
+      - ../noodlee-services/_rabbitmq/rabbitmq-isolated.conf:/etc/rabbitmq/rabbitmq.config
+    networks:
+      - noodlee-system-network
+
+networks:
+  noodlee-system-network:
+    name: noodlee-system-network
+    driver: bridge
+    
+volumes:
+  authentication-service_database-volume:
+  users-service_database-volume:
+  courses-service_database-volume:
+  message-service_database-volume:
